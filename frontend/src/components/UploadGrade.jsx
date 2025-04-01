@@ -28,9 +28,14 @@ const UploadGrade = () => {
     const contract = new ethers.Contract(contractAddressJson.address, contractABI.abi, signer);
 
     try {
-      // 检查当前用户是否为教师
+      // 获取当前用户角色
       const role = await contract.getUserRole(signer.getAddress());
-      if (role !== 1) { // 1代表教师角色
+
+      // 转换 BigNumber 为数字进行比较
+      const roleValue = role.toString();  // 或者使用 role.toNumber() 根据返回的类型
+
+      // 检查是否为教师角色（1）
+      if (roleValue !== '1') { // 确保 '1' 是教师角色的正确编号
         alert("❌ 你不是教师角色，无法上传成绩");
         return;
       }

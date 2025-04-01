@@ -8,12 +8,15 @@ const RegisterUser = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [contactNumber, setContactNumber] = useState('');
-  const [role, setRole] = useState(2); // 默认角色是学生 (Role.Student)
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
-    if (!username || !email || !contactNumber) return alert("❌ 请填写完整信息");
-    if (!window.ethereum) return alert("请安装 MetaMask");
+    if (!username || !email || !contactNumber) {
+      return alert("❌ 请填写完整信息");
+    }
+    if (!window.ethereum) {
+      return alert("请安装 MetaMask");
+    }
 
     setLoading(true);
 
@@ -33,15 +36,28 @@ const RegisterUser = () => {
       const tx = await contract.registerUser(username, email, contactNumber);
       await tx.wait();
       alert('✅ 注册成功');
-
-      // 自动为用户分配角色 (示例: 学生 / 教师)
-      const txRole = await contract.assignRole(signer.getAddress(), role);
-      await txRole.wait();
-      alert('✅ 角色分配成功');
       
     } catch (err) {
       console.error(err);
-      alert('❌ 注册失败');
+
+      // 根据错误消息提供具体提示
+      let errorMessage = '❌ 注册失败';
+
+      if (err?.code === 'UNPREDICTABLE_GAS_LIMIT') {
+        errorMessage = '❌ 交易失败，无法预测Gas费用。';
+      } else if (err?.message.includes('revert')) {
+        if (err?.message.includes('管理员不能注册')) {
+          errorMessage = '❌ 你不能注册为用户，因为你是管理员。';
+        } else if (err?.message.includes('User already exists')) {
+          errorMessage = '❌ 用户已存在，请使用不同的用户名或联系方式。';
+        } else {
+          errorMessage = '❌ 合约操作失败，请稍后再试。';
+        }
+      } else {
+        errorMessage = '❌ 未知错误，请稍后再试。';
+      }
+
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -69,15 +85,6 @@ const RegisterUser = () => {
         onChange={e => setContactNumber(e.target.value)}
         style={{ padding: '0.5rem', margin: '0.5rem', width: '300px' }}
       />
-      <select
-        value={role}
-        onChange={e => setRole(Number(e.target.value))}
-        style={{ padding: '0.5rem', margin: '0.5rem', width: '300px' }}
-      >
-        <option value={2}>学生 (Student)</option>
-        <option value={1}>教师 (Teacher)</option>
-        <option value={3}>成绩管理员 (GradeManager)</option>
-      </select>
       <button
         onClick={handleRegister}
         disabled={loading}

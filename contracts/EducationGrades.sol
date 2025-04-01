@@ -24,6 +24,7 @@ contract EducationGrades {
         string email;           // 用户邮箱
         string contactNumber;   // 用户联系号码
         Role role;              // 用户角色
+        bool isRegistered;      // 用户是否已注册
     }
 
     address public admin;  // 管理员地址
@@ -37,7 +38,8 @@ contract EducationGrades {
     event GradeStatusUpdated(string indexed gradeId, string newStatus);
     event RoleAssigned(address indexed user, Role role);
     event UserRegistered(address indexed user, string username, string email, string contactNumber);
-    
+    event UserRemoved(address indexed user);
+
     // 角色权限管理：管理员权限
     modifier onlyAdmin() {
         require(userRoles[msg.sender] == Role.Admin, "Only admin can perform this action");
@@ -77,28 +79,34 @@ contract EducationGrades {
     // 管理员可以为用户分配角色
     function assignRole(address _user, Role _role) external onlyAdmin {
         userRoles[_user] = _role;
+        users[_user].role = _role;
         emit RoleAssigned(_user, _role);
     }
 
     // 管理员可以添加教师
     function addTeacher(address _teacher) external onlyAdmin {
         userRoles[_teacher] = Role.Teacher;
+        users[_teacher].role = Role.Teacher;
         emit RoleAssigned(_teacher, Role.Teacher);
     }
 
     // 管理员可以移除教师
     function removeTeacher(address _teacher) external onlyAdmin {
         userRoles[_teacher] = Role.Student;  // 可将其角色重置为学生或其他角色
+        users[_teacher].role = Role.Student;
         emit RoleAssigned(_teacher, Role.Student);
     }
 
     // 注册用户并设置其基本信息
     function registerUser(string calldata username, string calldata email, string calldata contactNumber) external notAdmin {
+        require(!users[msg.sender].isRegistered, "This address is already registered.");
+        
         users[msg.sender] = User({
             username: username,
             email: email,
             contactNumber: contactNumber,
-            role: userRoles[msg.sender]  // 用户注册时的角色
+            role: Role.Student,  // 默认角色为学生
+            isRegistered: true
         });
 
         userList.push(msg.sender); // 记录用户地址
@@ -137,8 +145,8 @@ contract EducationGrades {
         emit GradeStatusUpdated(studentGrades[studentId][index].gradeId, newStatus);
     }
 
-    // 学生查询自己的成绩
-    function getGrades(string calldata studentId) external view onlyStudent returns (Grade[] memory) {
+    // 查询学生的成绩
+    function getGrades(string calldata studentId) external view  returns (Grade[] memory) {
         return studentGrades[studentId];
     }
 
@@ -172,13 +180,20 @@ contract EducationGrades {
         return userRoles[msg.sender] == Role.GradeManager;
     }
 
-    // 成绩管理员查询某个学生的所有成绩
-    function getAllGradesForStudent(string calldata studentId) external view onlyGradeManager returns (Grade[] memory) {
-        return studentGrades[studentId];
-    }
-
     // 管理员查询所有用户地址
     function getAllUsers() external view onlyAdmin returns (address[] memory) {
         return userList;
+    }
+
+    // 管理员删除用户
+    function removeUser(address _user) external onlyAdmin {
+        require(users[_user].isRegistered, "User is not registered.");
+        
+        // 清除用户成绩记录
+        delete studentGrades[users[_user].username];
+        
+        // 重置用户信息
+        delete users[_user];
+        emit UserRemoved(_user);
     }
 }
