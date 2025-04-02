@@ -2,102 +2,91 @@
 pragma solidity ^0.8.20;
 
 contract EducationGrades {
-
-    // 定义角色枚举类型
     enum Role { Admin, Teacher, Student, GradeManager }
 
-    // 定义成绩数据结构
     struct Grade {
-        string gradeId;         // 成绩数据唯一 ID
-        string studentId;       // 学生 ID
-        string course;          // 课程名
-        uint8 score;            // 成绩分
-        uint256 timestamp;      // 录入时间
-        address teacher;        // 上传教师
-        string status;          // 数据状态，如“有效”
-        string remark;          // 可选备注
+        string gradeId;
+        string studentId;
+        string course;
+        uint8 score;
+        uint256 timestamp;
+        address teacher;
+        string status;
+        string remark;
     }
 
-    // 定义用户数据结构
     struct User {
-        string username;        // 用户名
-        string email;           // 用户邮箱
-        string contactNumber;   // 用户联系号码
-        Role role;              // 用户角色
-        bool isRegistered;      // 用户是否已注册
+        string username;
+        string email;
+        string contactNumber;
+        Role role;
+        bool isRegistered;
     }
 
-    address public admin;  // 管理员地址
-    mapping(address => User) public users;  // 用户表映射：地址 => 用户信息
-    mapping(address => Role) public userRoles;  // 地址 => 用户角色
-    mapping(string => Grade[]) private studentGrades;  // 成绩数据存储：按学生 ID 映射多个成绩记录
+    address public admin;
+    mapping(address => User) public users;
+    mapping(address => Role) public userRoles;
+    mapping(string => Grade[]) private studentGradesById;
+    mapping(string => Grade[]) private studentGradesByUsername;
+    mapping(address => Grade[]) private studentGradesByAddress;
+    mapping(address => Grade[]) private teacherGrades;
+    address[] private userList;
 
-    address[] private userList; // 存储所有用户地址
-    
     event GradeUploaded(string indexed gradeId, string studentId, string course, uint8 score, address teacher);
     event GradeStatusUpdated(string indexed gradeId, string newStatus);
+    event GradeApproved(string indexed gradeId, address approvedBy);
     event RoleAssigned(address indexed user, Role role);
     event UserRegistered(address indexed user, string username, string email, string contactNumber);
     event UserRemoved(address indexed user);
 
-    // 角色权限管理：管理员权限
     modifier onlyAdmin() {
         require(userRoles[msg.sender] == Role.Admin, "Only admin can perform this action");
         _;
     }
 
-    // 角色权限管理：教师权限
     modifier onlyTeacher() {
         require(userRoles[msg.sender] == Role.Teacher, "Only teacher can perform this action");
         _;
     }
 
-    // 角色权限管理：学生权限
     modifier onlyStudent() {
         require(userRoles[msg.sender] == Role.Student, "Only student can perform this action");
         _;
     }
 
-    // 角色权限管理：成绩管理员权限
     modifier onlyGradeManager() {
         require(userRoles[msg.sender] == Role.GradeManager, "Only grade manager can perform this action");
         _;
     }
 
-    // 修饰符：确保调用者不是管理员
     modifier notAdmin() {
         require(userRoles[msg.sender] != Role.Admin, "Admins cannot register");
         _;
     }
 
-    // 部署合约时设置管理员为合约创建者
     constructor() {
         admin = msg.sender;
-        userRoles[admin] = Role.Admin;  // 默认创建者为管理员
+        userRoles[admin] = Role.Admin;
     }
 
-    // 管理员可以为用户分配角色
     function assignRole(address _user, Role _role) external onlyAdmin {
         userRoles[_user] = _role;
         users[_user].role = _role;
         emit RoleAssigned(_user, _role);
     }
 
-    // 管理员可以添加教师
     function addTeacher(address _teacher) external onlyAdmin {
         userRoles[_teacher] = Role.Teacher;
         users[_teacher].role = Role.Teacher;
         emit RoleAssigned(_teacher, Role.Teacher);
     }
 
-    // 管理员可以移除教师
     function removeTeacher(address _teacher) external onlyAdmin {
-        userRoles[_teacher] = Role.Student;  // 可将其角色重置为学生或其他角色
+        userRoles[_teacher] = Role.Student;
         users[_teacher].role = Role.Student;
         emit RoleAssigned(_teacher, Role.Student);
     }
 
-    // 注册用户并设置其基本信息
     function registerUser(string calldata username, string calldata email, string calldata contactNumber) external notAdmin {
         require(!users[msg.sender].isRegistered, "This address is already registered.");
         
@@ -105,23 +94,26 @@ contract EducationGrades {
             username: username,
             email: email,
             contactNumber: contactNumber,
-            role: Role.Student,  // 默认角色为学生
+            role: Role.Student,
             isRegistered: true
         });
 
-        userList.push(msg.sender); // 记录用户地址
+        userList.push(msg.sender);
         emit UserRegistered(msg.sender, username, email, contactNumber);
     }
 
-    // 教师上传成绩
     function uploadGrade(
-        string calldata gradeId,
-        string calldata studentId,
-        string calldata course,
-        uint8 score,
-        string calldata remark
+    string calldata gradeId,
+    string calldata studentId,
+    string calldata course,
+    uint8 score,
+    string calldata remark,
+    address studentAddress // 直接传递学生地址
     ) external onlyTeacher {
         require(score <= 100, "Invalid score");
+
+        // Ensure student is registered
+        require(users[studentAddress].isRegistered, "Student is not registered");
 
         Grade memory newGrade = Grade({
             gradeId: gradeId,
@@ -130,69 +122,125 @@ contract EducationGrades {
             score: score,
             timestamp: block.timestamp,
             teacher: msg.sender,
-            status: "active",  // 初始状态为有效
+            status: "pending",
             remark: remark
         });
 
-        studentGrades[studentId].push(newGrade);
+        // Store grade by student address
+        studentGradesById[studentId].push(newGrade);
+        studentGradesByUsername[users[studentAddress].username].push(newGrade);
+        studentGradesByAddress[studentAddress].push(newGrade);
+        teacherGrades[msg.sender].push(newGrade);
+
         emit GradeUploaded(gradeId, studentId, course, score, msg.sender);
     }
 
-    // 管理员更新成绩状态（有效/无效）
-    function updateGradeStatus(string calldata studentId, uint index, string calldata newStatus) external onlyAdmin {
-        require(index < studentGrades[studentId].length, "Invalid index");
-        studentGrades[studentId][index].status = newStatus;
-        emit GradeStatusUpdated(studentGrades[studentId][index].gradeId, newStatus);
+    function updateGradeStatus(string calldata gradeId, string calldata newStatus) external onlyAdmin {
+        bool updated = false;
+        for (uint i = 0; i < userList.length; i++) {
+            address studentAddress = userList[i];
+            string memory studentId = users[studentAddress].username;
+            Grade[] storage grades = studentGradesById[studentId];
+            for (uint j = 0; j < grades.length; j++) {
+                if (keccak256(abi.encodePacked(grades[j].gradeId)) == keccak256(abi.encodePacked(gradeId))) {
+                    grades[j].status = newStatus;
+                    updated = true;
+                    emit GradeStatusUpdated(gradeId, newStatus);
+                    break;
+                }
+            }
+            if (updated) break;
+        }
+        require(updated, "Grade not found");
     }
 
-    // 查询学生的成绩
-    function getGrades(string calldata studentId) external view  returns (Grade[] memory) {
-        return studentGrades[studentId];
+    function approveGrade(string calldata gradeId) external onlyAdmin {
+        bool approved = false;
+        for (uint i = 0; i < userList.length; i++) {
+            address studentAddress = userList[i];
+            string memory studentId = users[studentAddress].username;
+            Grade[] storage grades = studentGradesById[studentId];
+            for (uint j = 0; j < grades.length; j++) {
+                if (keccak256(abi.encodePacked(grades[j].gradeId)) == keccak256(abi.encodePacked(gradeId))) {
+                    grades[j].status = "approved";
+                    approved = true;
+                    emit GradeApproved(gradeId, msg.sender);
+                    break;
+                }
+            }
+            if (approved) break;
+        }
+        require(approved, "Grade not found");
     }
 
-    // 查询用户信息
+    function getGradesByStudentId(string calldata studentId) external view returns (Grade[] memory) {
+        return studentGradesById[studentId];
+    }
+
+    function getGradesByUsername(string calldata username) external view returns (Grade[] memory) {
+        return studentGradesByUsername[username];
+    }
+
+    function getGradesByAddress(address studentAddress) external view returns (Grade[] memory) {
+        return studentGradesByAddress[studentAddress];
+    }
+
+    function getPendingGradesByTeacher(address teacherAddress) external view returns (Grade[] memory) {
+        Grade[] storage allGrades = teacherGrades[teacherAddress];
+        uint count = 0;
+        for (uint i = 0; i < allGrades.length; i++) {
+            if (keccak256(abi.encodePacked(allGrades[i].status)) == keccak256(abi.encodePacked("pending"))) {
+                count++;
+            }
+        }
+
+        Grade[] memory pendingGrades = new Grade[](count);
+        uint index = 0;
+        for (uint i = 0; i < allGrades.length; i++) {
+            if (keccak256(abi.encodePacked(allGrades[i].status)) == keccak256(abi.encodePacked("pending"))) {
+                pendingGrades[index] = allGrades[i];
+                index++;
+            }
+        }
+
+        return pendingGrades;
+    }
+
     function getUserInfo(address _user) external view returns (User memory) {
         return users[_user];
     }
 
-    // 查询某个地址的角色
     function getUserRole(address _user) external view returns (Role) {
         return userRoles[_user];
     }
 
-    // 查询管理员
     function isAdmin() external view returns (bool) {
         return userRoles[msg.sender] == Role.Admin;
     }
 
-    // 查询教师权限
     function isTeacher() external view returns (bool) {
         return userRoles[msg.sender] == Role.Teacher;
     }
 
-    // 查询学生权限
     function isStudent() external view returns (bool) {
         return userRoles[msg.sender] == Role.Student;
     }
 
-    // 查询成绩管理员权限
     function isGradeManager() external view returns (bool) {
         return userRoles[msg.sender] == Role.GradeManager;
     }
 
-    // 管理员查询所有用户地址
     function getAllUsers() external view onlyAdmin returns (address[] memory) {
         return userList;
     }
 
-    // 管理员删除用户
     function removeUser(address _user) external onlyAdmin {
         require(users[_user].isRegistered, "User is not registered.");
-        
-        // 清除用户成绩记录
-        delete studentGrades[users[_user].username];
-        
-        // 重置用户信息
+
+        delete studentGradesById[users[_user].username];
+        delete studentGradesByUsername[users[_user].username];
+        delete studentGradesByAddress[_user];
+        delete teacherGrades[_user];
         delete users[_user];
         emit UserRemoved(_user);
     }

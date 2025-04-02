@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ethers } from 'ethers';
 import contractABI from '../contracts/EducationGrades.json';
 import contractAddressJson from '../contracts/contract-address.json';
@@ -6,94 +6,135 @@ import { Link } from 'react-router-dom';
 
 const UploadGrade = () => {
   const [gradeId, setGradeId] = useState('');
-  const [studentId, setStudentId] = useState('');
+  const [studentAddress, setStudentAddress] = useState(''); // 使用学生地址
   const [course, setCourse] = useState('');
   const [score, setScore] = useState('');
   const [remark, setRemark] = useState('');
+  const [pendingGrades, setPendingGrades] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const handleUpload = async () => {
-    // 验证是否填写完整信息
-    if (!gradeId || !studentId || !course || !score) return alert("❌ 请填写完整成绩信息");
-
-    // 验证分数是否在有效范围内
-    if (score < 0 || score > 100) return alert("❌ 成绩必须在 0 到 100 之间");
-
-    if (!window.ethereum) return alert("请安装 MetaMask");
-
-    setLoading(true);
-
+  const getContract = async () => {
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
     const contract = new ethers.Contract(contractAddressJson.address, contractABI.abi, signer);
+    return { contract, signer };
+  };
 
+  const getPendingGrades = async () => {
     try {
-      // 获取当前用户角色
-      const role = await contract.getUserRole(signer.getAddress());
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const address = await signer.getAddress();
+      const contract = new ethers.Contract(contractAddressJson.address, contractABI.abi, signer);
+  
+      const result = await contract.getPendingGradesByTeacher(address);
+      setPendingGrades(result);
+    } catch (err) {
+      console.error("❌ 获取未审核成绩失败:", err);
+    }
+  };
+  
 
-      // 转换 BigNumber 为数字进行比较
-      const roleValue = role.toString();  // 或者使用 role.toNumber() 根据返回的类型
-
-      // 检查是否为教师角色（1）
-      if (roleValue !== '1') { // 确保 '1' 是教师角色的正确编号
-        alert("❌ 你不是教师角色，无法上传成绩");
+  const handleUpload = async () => {
+    if (!gradeId || !studentAddress || !course || !score) {
+      return alert("❌ 请填写完整成绩信息");
+    }
+  
+    if (!ethers.isAddress(studentAddress)) {
+      return alert("❌ 学生地址格式不正确");
+    }
+  
+    setLoading(true);
+    try {
+      const { contract, signer } = await getContract();
+      const address = await signer.getAddress();
+  
+      const role = await contract.getUserRole(address);
+      if (role.toString() !== '1') {
+        alert("❌ 你不是教师角色");
         return;
       }
-
-      // 上传成绩到区块链
-      const tx = await contract.uploadGrade(gradeId, studentId, course, Number(score), remark);
+  
+      const userInfo = await contract.getUserInfo(studentAddress);
+      if (!userInfo.isRegistered) {
+        alert("❌ 学生未注册");
+        return;
+      }
+  
+      const tx = await contract.uploadGrade(
+        gradeId,
+        "", // studentId 目前为空
+        course,
+        Number(score),
+        remark,
+        studentAddress
+      );
       await tx.wait();
-      alert('✅ 成绩上传成功');
+      alert("✅ 成绩上传成功");
+  
+      setGradeId('');
+      setStudentAddress('');
+      setCourse('');
+      setScore('');
+      setRemark('');
+      getPendingGrades();
     } catch (err) {
-      console.error(err);
-      alert('❌ 上传失败，请稍后重试');
+      console.error("上传失败:", err);
+      alert(`❌ 上传失败: ${err?.error?.message || err.message}`);
     } finally {
       setLoading(false);
     }
   };
+  
+
+  useEffect(() => {
+    getPendingGrades();
+  }, []);
 
   return (
     <div>
       <Link to="/" style={{ display: 'inline-block', marginBottom: '1rem' }}>← 返回首页</Link>
       <h2>🧑‍🏫 教师上传成绩</h2>
-      <input
-        placeholder="成绩 ID"
-        value={gradeId}
-        onChange={e => setGradeId(e.target.value)}
-        style={{ padding: '0.5rem', margin: '0.5rem', width: '300px' }}
-      />
-      <input
-        placeholder="学生 ID"
-        value={studentId}
-        onChange={e => setStudentId(e.target.value)}
-        style={{ padding: '0.5rem', margin: '0.5rem', width: '300px' }}
-      />
-      <input
-        placeholder="课程名"
-        value={course}
-        onChange={e => setCourse(e.target.value)}
-        style={{ padding: '0.5rem', margin: '0.5rem', width: '300px' }}
-      />
-      <input
-        placeholder="分数"
-        value={score}
-        onChange={e => setScore(e.target.value)}
-        type="number"
-        style={{ padding: '0.5rem', margin: '0.5rem', width: '300px' }}
-      />
-      <input
-        placeholder="备注"
-        value={remark}
-        onChange={e => setRemark(e.target.value)}
-        style={{ padding: '0.5rem', margin: '0.5rem', width: '300px' }}
-      />
-      <button
-        onClick={handleUpload}
-        disabled={loading}
-        style={{ padding: '0.5rem 1rem', margin: '0.5rem' }}
-      >
+
+      <input placeholder="成绩 ID" value={gradeId} onChange={e => setGradeId(e.target.value)} />
+      <input placeholder="学生地址" value={studentAddress} onChange={e => setStudentAddress(e.target.value)} />
+      <input placeholder="课程名" value={course} onChange={e => setCourse(e.target.value)} />
+      <input type="number" placeholder="分数" value={score} onChange={e => setScore(e.target.value)} />
+      <input placeholder="备注（可选）" value={remark} onChange={e => setRemark(e.target.value)} />
+
+      <button onClick={handleUpload} disabled={loading}>
         {loading ? '上传中...' : '上传成绩'}
       </button>
+
+      <h3 style={{ marginTop: '2rem' }}>📋 未审核成绩（pending）</h3>
+      {pendingGrades.length > 0 ? (
+        <table border="1" cellPadding="6">
+          <thead>
+            <tr>
+              <th>成绩ID</th>
+              <th>课程</th>
+              <th>学生ID</th>
+              <th>分数</th>
+              <th>状态</th>
+              <th>备注</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pendingGrades.map((g, idx) => (
+              <tr key={idx}>
+                <td>{g.gradeId}</td>
+                <td>{g.course}</td>
+                <td>{g.studentId}</td>
+                <td>{g.score}</td>
+                <td>{g.status}</td>
+                <td>{g.remark}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <p>暂无未审核成绩</p>
+      )}
     </div>
   );
 };
