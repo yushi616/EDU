@@ -3,12 +3,14 @@ import { ethers } from 'ethers';
 import contractABI from '../contracts/EducationGrades.json';
 import contractAddressJson from '../contracts/contract-address.json';
 import { Link } from 'react-router-dom';
+import styles from './RegisterUser.module.css'; // 引入新的CSS Module
 
 const RegisterUser = () => {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleRegister = async () => {
     if (!username || !email || !contactNumber) {
@@ -19,6 +21,7 @@ const RegisterUser = () => {
     }
 
     setLoading(true);
+    setErrorMessage(''); // 清空错误信息
 
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
@@ -57,41 +60,45 @@ const RegisterUser = () => {
         errorMessage = '❌ 未知错误，请稍后再试。';
       }
 
-      alert(errorMessage);
+      setErrorMessage(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div>
-      <Link to="/" style={{ display: 'inline-block', marginBottom: '1rem' }}>← 返回首页</Link>
-      <h2>📝 用户注册</h2>
+    <div className={styles.container}>
+      <Link to="/" className={styles.link}>← 返回首页</Link>
+      <h2 className={styles.heading}>📝 用户注册</h2>
+
       <input
+        className={styles.inputField}
         placeholder="用户名"
         value={username}
         onChange={e => setUsername(e.target.value)}
-        style={{ padding: '0.5rem', margin: '0.5rem', width: '300px' }}
       />
       <input
+        className={styles.inputField}
         placeholder="邮箱"
         value={email}
         onChange={e => setEmail(e.target.value)}
-        style={{ padding: '0.5rem', margin: '0.5rem', width: '300px' }}
       />
       <input
+        className={styles.inputField}
         placeholder="联系方式"
         value={contactNumber}
         onChange={e => setContactNumber(e.target.value)}
-        style={{ padding: '0.5rem', margin: '0.5rem', width: '300px' }}
       />
+
       <button
+        className={`${styles.button} ${loading ? styles.loading : ''}`}
         onClick={handleRegister}
         disabled={loading}
-        style={{ padding: '0.5rem 1rem', margin: '0.5rem' }}
       >
         {loading ? '注册中...' : '注册'}
       </button>
+
+      {errorMessage && <p className={styles.errorMessage}>{errorMessage}</p>}
     </div>
   );
 };

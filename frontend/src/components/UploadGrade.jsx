@@ -3,13 +3,16 @@ import { ethers } from 'ethers';
 import contractABI from '../contracts/EducationGrades.json';
 import contractAddressJson from '../contracts/contract-address.json';
 import { Link } from 'react-router-dom';
+import styles from './UploadGrade.module.css'; // 导入 CSS Module
 
 const UploadGrade = () => {
-  const [studentId, setStudentId] = useState('');  // 学号
-  const [studentAddress, setStudentAddress] = useState(''); // 学生地址
-  const [course, setCourse] = useState('');
-  const [score, setScore] = useState('');
-  const [remark, setRemark] = useState('');
+  const [formData, setFormData] = useState({
+    studentId: '',
+    studentAddress: '',
+    course: '',
+    score: '',
+    remark: '',
+  });
   const [pendingGrades, setPendingGrades] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -31,13 +34,35 @@ const UploadGrade = () => {
     }
   };
 
-  const handleUpload = async () => {
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
+  const validateForm = () => {
+    const { studentId, studentAddress, course, score } = formData;
     if (!studentId || !studentAddress || !course || !score) {
-      return alert("❌ 请填写完整成绩信息");
+      return "❌ 请填写完整成绩信息";
     }
 
     if (!ethers.isAddress(studentAddress)) {
-      return alert("❌ 学生地址格式不正确");
+      return "❌ 学生地址格式不正确";
+    }
+
+    if (score < 0 || score > 100) {
+      return "❌ 分数应在 0 到 100 之间";
+    }
+
+    return null;
+  };
+
+  const handleUpload = async () => {
+    const validationMessage = validateForm();
+    if (validationMessage) {
+      return alert(validationMessage);
     }
 
     setLoading(true);
@@ -51,33 +76,32 @@ const UploadGrade = () => {
         return;
       }
 
+      const { studentAddress, studentId, course, score, remark } = formData;
       const userInfo = await contract.getUserInfo(studentAddress);
       if (!userInfo.isRegistered) {
         alert("❌ 学生未注册");
         return;
       }
 
-      // 自动生成gradeId
-      const gradeId = Date.now();  // 使用当前时间戳生成唯一的成绩ID
-
       // 上传成绩
       const tx = await contract.uploadGrade(
-        gradeId.toString(),
-        studentId, // 使用学号
-        course,
-        Number(score),
-        remark,
-        studentAddress
+        studentId,  // studentId 应该是 string 类型
+        course,     // course 应该是 string 类型
+        Number(score),  // score 应该是 uint8 类型
+        remark,     // remark 应该是 string 类型
+        studentAddress // studentAddress 应该是 address 类型
       );
       await tx.wait();
       alert("✅ 成绩上传成功");
 
       // 清空表单
-      setStudentId('');
-      setStudentAddress('');
-      setCourse('');
-      setScore('');
-      setRemark('');
+      setFormData({
+        studentId: '',
+        studentAddress: '',
+        course: '',
+        score: '',
+        remark: '',
+      });
 
       // 获取未审核成绩
       getPendingGrades();
@@ -94,23 +118,33 @@ const UploadGrade = () => {
   }, []);
 
   return (
-    <div>
-      <Link to="/" style={{ display: 'inline-block', marginBottom: '1rem' }}>← 返回首页</Link>
-      <h2>🧑‍🏫 教师上传成绩</h2>
+    <div className={styles.container}>
+      <Link to="/" className={styles.link}>← 返回首页</Link>
+      <h2 className={styles.heading}>🧑‍🏫 教师上传成绩</h2>
 
-      <input placeholder="学号" value={studentId} onChange={e => setStudentId(e.target.value)} />
-      <input placeholder="学生地址" value={studentAddress} onChange={e => setStudentAddress(e.target.value)} />
-      <input placeholder="课程名" value={course} onChange={e => setCourse(e.target.value)} />
-      <input type="number" placeholder="分数" value={score} onChange={e => setScore(e.target.value)} />
-      <input placeholder="备注（可选）" value={remark} onChange={e => setRemark(e.target.value)} />
+      {['studentId', 'studentAddress', 'course', 'score', 'remark'].map((field, idx) => (
+        <input
+          key={idx}
+          name={field}
+          className={styles.inputField}
+          placeholder={field === 'score' ? '分数' : field === 'remark' ? '备注（可选）' : field}
+          value={formData[field]}
+          onChange={handleInputChange}
+          type={field === 'score' ? 'number' : 'text'}
+        />
+      ))}
 
-      <button onClick={handleUpload} disabled={loading}>
+      <button 
+        className={styles.button} 
+        onClick={handleUpload} 
+        disabled={loading}
+      >
         {loading ? '上传中...' : '上传成绩'}
       </button>
 
-      <h3 style={{ marginTop: '2rem' }}>📋 未审核成绩（pending）</h3>
+      <h3 className="text-2xl font-semibold mt-8 mb-4">📋 未审核成绩（pending）</h3>
       {pendingGrades.length > 0 ? (
-        <table border="1" cellPadding="6">
+        <table className={styles.table}>
           <thead>
             <tr>
               <th>成绩ID</th>
@@ -135,7 +169,7 @@ const UploadGrade = () => {
           </tbody>
         </table>
       ) : (
-        <p>暂无未审核成绩</p>
+        <p className={styles.noGrades}>暂无未审核成绩</p>
       )}
     </div>
   );
