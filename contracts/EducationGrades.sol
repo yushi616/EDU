@@ -1,17 +1,17 @@
-// SPDX-License-Identifier: MIT
+// SPDX-License-Identifier: MIT 
 pragma solidity ^0.8.20;
 
 contract EducationGrades {
     enum Role { Admin, Teacher, Student, GradeManager }
 
     struct Grade {
-        string gradeId;
+        uint gradeId; // 将gradeId改为uint类型，使用自增ID
         string studentId;
         string course;
         uint8 score;
         uint256 timestamp;
         address teacher;
-        string status;
+        string status;  // 状态 "approved"、"pending" 或 "rejected"
         string remark;
     }
 
@@ -32,9 +32,11 @@ contract EducationGrades {
     mapping(address => Grade[]) private teacherGrades;
     address[] private userList;
 
-    event GradeUploaded(string indexed gradeId, string studentId, string course, uint8 score, address teacher);
-    event GradeStatusUpdated(string indexed gradeId, string newStatus);
-    event GradeApproved(string indexed gradeId, address approvedBy);
+    uint private gradeIdCounter = 0; // 自增ID计数器
+
+    event GradeUploaded(uint indexed gradeId, string studentId, string course, uint8 score, address teacher);
+    event GradeStatusUpdated(uint indexed gradeId, string newStatus);
+    event GradeApproved(uint indexed gradeId, address approvedBy);
     event RoleAssigned(address indexed user, Role role);
     event UserRegistered(address indexed user, string username, string email, string contactNumber);
     event UserRemoved(address indexed user);
@@ -102,18 +104,22 @@ contract EducationGrades {
         emit UserRegistered(msg.sender, username, email, contactNumber);
     }
 
+    // 修改上传成绩逻辑，默认状态为 "approved"
     function uploadGrade(
-    string calldata gradeId,
-    string calldata studentId,
-    string calldata course,
-    uint8 score,
-    string calldata remark,
-    address studentAddress // 直接传递学生地址
+        string calldata studentId,
+        string calldata course,
+        uint8 score,
+        string calldata remark,
+        address studentAddress
     ) external onlyTeacher {
         require(score <= 100, "Invalid score");
 
         // Ensure student is registered
         require(users[studentAddress].isRegistered, "Student is not registered");
+
+        // 自增ID
+        uint gradeId = gradeIdCounter;
+        gradeIdCounter++;
 
         Grade memory newGrade = Grade({
             gradeId: gradeId,
@@ -122,7 +128,7 @@ contract EducationGrades {
             score: score,
             timestamp: block.timestamp,
             teacher: msg.sender,
-            status: "pending",
+            status: "approved",  // 默认上传成绩为通过
             remark: remark
         });
 
@@ -135,14 +141,37 @@ contract EducationGrades {
         emit GradeUploaded(gradeId, studentId, course, score, msg.sender);
     }
 
-    function updateGradeStatus(string calldata gradeId, string calldata newStatus) external onlyAdmin {
+    // 修改成绩状态为 "rejected" 的新函数
+    function setGradeToRejected(uint gradeId) external onlyAdmin {
         bool updated = false;
         for (uint i = 0; i < userList.length; i++) {
             address studentAddress = userList[i];
             string memory studentId = users[studentAddress].username;
             Grade[] storage grades = studentGradesById[studentId];
             for (uint j = 0; j < grades.length; j++) {
-                if (keccak256(abi.encodePacked(grades[j].gradeId)) == keccak256(abi.encodePacked(gradeId))) {
+                if (grades[j].gradeId == gradeId) {
+                    // 设置不通过的条件：成绩低于60分
+                    if (grades[j].score < 60) {
+                        grades[j].status = "rejected";
+                        updated = true;
+                        emit GradeStatusUpdated(gradeId, "rejected");
+                    }
+                    break;
+                }
+            }
+            if (updated) break;
+        }
+        require(updated, "Grade not found or doesn't meet rejection criteria");
+    }
+
+    function updateGradeStatus(uint gradeId, string calldata newStatus) external onlyAdmin {
+        bool updated = false;
+        for (uint i = 0; i < userList.length; i++) {
+            address studentAddress = userList[i];
+            string memory studentId = users[studentAddress].username;
+            Grade[] storage grades = studentGradesById[studentId];
+            for (uint j = 0; j < grades.length; j++) {
+                if (grades[j].gradeId == gradeId) {
                     grades[j].status = newStatus;
                     updated = true;
                     emit GradeStatusUpdated(gradeId, newStatus);
@@ -154,14 +183,14 @@ contract EducationGrades {
         require(updated, "Grade not found");
     }
 
-    function approveGrade(string calldata gradeId) external onlyAdmin {
+    function approveGrade(uint gradeId) external onlyAdmin {
         bool approved = false;
         for (uint i = 0; i < userList.length; i++) {
             address studentAddress = userList[i];
             string memory studentId = users[studentAddress].username;
             Grade[] storage grades = studentGradesById[studentId];
             for (uint j = 0; j < grades.length; j++) {
-                if (keccak256(abi.encodePacked(grades[j].gradeId)) == keccak256(abi.encodePacked(gradeId))) {
+                if (grades[j].gradeId == gradeId) {
                     grades[j].status = "approved";
                     approved = true;
                     emit GradeApproved(gradeId, msg.sender);
@@ -185,25 +214,35 @@ contract EducationGrades {
         return studentGradesByAddress[studentAddress];
     }
 
-    function getPendingGradesByTeacher(address teacherAddress) external view returns (Grade[] memory) {
-        Grade[] storage allGrades = teacherGrades[teacherAddress];
+    function getLowScoreGrades() external view returns (Grade[] memory) {
         uint count = 0;
-        for (uint i = 0; i < allGrades.length; i++) {
-            if (keccak256(abi.encodePacked(allGrades[i].status)) == keccak256(abi.encodePacked("pending"))) {
-                count++;
+        // 遍历所有学生成绩并计数低于60分的成绩
+        for (uint i = 0; i < userList.length; i++) {
+            address studentAddress = userList[i];
+            string memory studentId = users[studentAddress].username;
+            Grade[] storage grades = studentGradesById[studentId];
+            for (uint j = 0; j < grades.length; j++) {
+                if (grades[j].score < 60) {
+                    count++;
+                }
             }
         }
 
-        Grade[] memory pendingGrades = new Grade[](count);
+        Grade[] memory lowScoreGrades = new Grade[](count);
         uint index = 0;
-        for (uint i = 0; i < allGrades.length; i++) {
-            if (keccak256(abi.encodePacked(allGrades[i].status)) == keccak256(abi.encodePacked("pending"))) {
-                pendingGrades[index] = allGrades[i];
-                index++;
+        for (uint i = 0; i < userList.length; i++) {
+            address studentAddress = userList[i];
+            string memory studentId = users[studentAddress].username;
+            Grade[] storage grades = studentGradesById[studentId];
+            for (uint j = 0; j < grades.length; j++) {
+                if (grades[j].score < 60) {
+                    lowScoreGrades[index] = grades[j];
+                    index++;
+                }
             }
         }
 
-        return pendingGrades;
+        return lowScoreGrades;
     }
 
     function getUserInfo(address _user) external view returns (User memory) {
@@ -236,7 +275,6 @@ contract EducationGrades {
 
     function removeUser(address _user) external onlyAdmin {
         require(users[_user].isRegistered, "User is not registered.");
-
         delete studentGradesById[users[_user].username];
         delete studentGradesByUsername[users[_user].username];
         delete studentGradesByAddress[_user];

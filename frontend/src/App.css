@@ -1,38 +1,94 @@
-.App {
-  text-align: center;
+/* Global Styles */
+body {
+  font-family: 'Roboto', sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f8f8f8;
 }
 
-.App-logo {
-  height: 40vmin;
-  pointer-events: none;
+a {
+  text-decoration: none;
+  color: inherit;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .App-logo {
-    animation: App-logo-spin infinite 20s linear;
-  }
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
+/* Header Styles */
+.header {
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
+  padding: 1rem 2rem;
+  background-color: #2C3E50;
   color: white;
+  border-bottom: 2px solid #ddd;
 }
 
-.App-link {
-  color: #61dafb;
+.nav-links {
+  display: flex;
 }
 
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.nav-link {
+  margin-right: 1.5rem;
+  font-weight: bold;
+  color: white;
+  font-size: 1rem;
+}
+
+.nav-link:hover {
+  text-decoration: underline;
+}
+
+.account-info {
+  font-size: 0.9rem;
+  color: #ddd;
+}
+
+/* Main Content */
+.main-content {
+  padding: 2rem;
+  background-color: #fff;
+  margin: 2rem;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.home h2 {
+  font-size: 2rem;
+  color: #2C3E50;
+}
+
+.home p {
+  font-size: 1.1rem;
+  color: #555;
+}
+
+.home-links {
+  list-style: none;
+  padding: 0;
+}
+
+.home-link {
+  display: block;
+  padding: 10px;
+  font-size: 1.2rem;
+  margin: 10px 0;
+  background-color: #3498DB;
+  color: white;
+  text-align: center;
+  border-radius: 8px;
+}
+
+.home-link:hover {
+  background-color: #2980B9;
+}
+
+/* 404 Not Found */
+.not-found {
+  text-align: center;
+  margin-top: 50px;
+  font-size: 1.5rem;
+}
+
+.not-found a {
+  color: #3498DB;
+  font-weight: bold;
 }

@@ -73,195 +73,98 @@ const AdminPanel = () => {
     }
   };
 
-  const handleApproveGrade = async (gradeId) => {
-    setLoading(true);
-    try {
-      const contract = await getContract();
-      const tx = await contract.approveGrade(gradeId);
-      await tx.wait();
-      alert("✅ 成绩审核通过");
-      fetchPendingGrades();
-    } catch (err) {
-      console.error(err);
-      alert("❌ 审核失败");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdateGradeStatus = async (gradeId, newStatus) => {
-    setLoading(true);
-    try {
-      const contract = await getContract();
-      const tx = await contract.updateGradeStatus(gradeId, newStatus);
-      await tx.wait();
-      alert("✅ 成绩状态更新成功");
-      fetchPendingGrades();
-    } catch (err) {
-      console.error(err);
-      alert("❌ 更新失败");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // New functions to handle role assignment and user removal
-  const handleAssignRole = async () => {
-    setLoading(true);
-    try {
-      const contract = await getContract();
-      const tx = await contract.assignRole(targetAddressForRole, roleIndex);
-      await tx.wait();
-      alert("✅ 角色分配成功");
-      fetchUsers();
-    } catch (err) {
-      console.error(err);
-      alert("❌ 角色分配失败");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRemoveRole = async () => {
-    setLoading(true);
-    try {
-      const contract = await getContract();
-      const tx = await contract.removeRole(targetAddressForRemoveRole);
-      await tx.wait();
-      alert("✅ 角色移除成功");
-      fetchUsers();
-    } catch (err) {
-      console.error(err);
-      alert("❌ 角色移除失败");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRemoveUser = async () => {
-    setLoading(true);
-    try {
-      const contract = await getContract();
-      const tx = await contract.removeUser(targetAddressForRemove);
-      await tx.wait();
-      alert("✅ 用户移除成功");
-      fetchUsers();
-    } catch (err) {
-      console.error(err);
-      alert("❌ 用户移除失败");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
     fetchUsers();
     fetchPendingGrades();
   }, []);
 
   return (
-    <div>
-      <Link to="/" style={{ display: 'inline-block', marginBottom: '1rem' }}>← 返回首页</Link>
-      <h2>⚙️ 管理员控制面板</h2>
+    <div className="main-content">
+      <Link to="/" className="back-link">← 返回首页</Link>
+      <h2 className="panel-title">⚙️ 管理员控制面板</h2>
 
       {/* 分配角色 */}
-      <h3>🎭 分配角色</h3>
-      <input
-        placeholder="用户地址"
-        value={targetAddressForRole}
-        onChange={e => setTargetAddressForRole(e.target.value)}
-      />
-      <select
-        value={roleIndex}
-        onChange={e => setRoleIndex(Number(e.target.value))}
-      >
-        {roleLabels.map((label, idx) => <option key={idx} value={idx}>{label}</option>)}
-      </select>
-      <button onClick={handleAssignRole} disabled={loading}>分配角色</button>
+      <div className="admin-section">
+        <h3>🎭 分配角色</h3>
+        <input
+          className="input-field"
+          placeholder="用户地址"
+          value={targetAddressForRole}
+          onChange={e => setTargetAddressForRole(e.target.value)}
+        />
+        <select
+          className="select-field"
+          value={roleIndex}
+          onChange={e => setRoleIndex(Number(e.target.value))}
+        >
+          {roleLabels.map((label, idx) => <option key={idx} value={idx}>{label}</option>)}
+        </select>
+        <button className="btn-primary" onClick={handleAssignRole} disabled={loading}>分配角色</button>
+      </div>
 
       {/* 移除角色 */}
-      <h3>🚫 移除角色</h3>
-      <input
-        placeholder="请输入用户地址"
-        value={targetAddressForRemoveRole}
-        onChange={e => setTargetAddressForRemoveRole(e.target.value)}
-      />
-      <button onClick={handleRemoveRole} disabled={loading}>移除角色</button>
+      <div className="admin-section">
+        <h3>🚫 移除角色</h3>
+        <input
+          className="input-field"
+          placeholder="请输入用户地址"
+          value={targetAddressForRemoveRole}
+          onChange={e => setTargetAddressForRemoveRole(e.target.value)}
+        />
+        <button className="btn-danger" onClick={handleRemoveRole} disabled={loading}>移除角色</button>
+      </div>
 
       {/* 移除用户 */}
-      <h3>👨‍🏫 移除用户</h3>
-      <input
-        placeholder="请输入用户地址"
-        value={targetAddressForRemove}
-        onChange={e => setTargetAddressForRemove(e.target.value)}
-      />
-      <button onClick={handleRemoveUser} disabled={loading}>移除用户</button>
+      <div className="admin-section">
+        <h3>👨‍🏫 移除用户</h3>
+        <input
+          className="input-field"
+          placeholder="请输入用户地址"
+          value={targetAddressForRemove}
+          onChange={e => setTargetAddressForRemove(e.target.value)}
+        />
+        <button className="btn-danger" onClick={handleRemoveUser} disabled={loading}>移除用户</button>
+      </div>
 
       {/* 用户列表 */}
-      <h3>📋 用户列表</h3>
-      {loadingUsers ? (
-        <p>加载用户列表...</p>
-      ) : (
-        <table border="1">
-          <thead>
-            <tr>
-              <th>地址</th>
-              <th>用户名</th>
-              <th>邮箱</th>
-              <th>联系方式</th>
-              <th>角色</th>
-            </tr>
-          </thead>
-          <tbody>
-            {userList.map((addr, idx) => {
-              const info = userInfoMap[addr];
-              return (
-                <tr key={idx}>
-                  <td>{addr}</td>
-                  <td>{info?.username}</td>
-                  <td>{info?.email}</td>
-                  <td>{info?.contact}</td>
-                  <td>{info?.role}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
-
-      {/* 待审核成绩 */}
-      <h3>📝 待审核成绩</h3>
-      {loadingGrades ? (
-        <p>加载待审核成绩...</p>
-      ) : (
-        pendingGrades.length > 0 ? (
-          <table border="1">
+      <div className="admin-section">
+        <h3>📋 用户列表</h3>
+        {loadingUsers ? (
+          <p>加载用户列表...</p>
+        ) : (
+          <table className="table">
             <thead>
               <tr>
-                <th>课程</th>
-                <th>分数</th>
-                <th>学生ID</th>
-                <th>操作</th>
+                <th>地址</th>
+                <th>用户名</th>
+                <th>邮箱</th>
+                <th>联系方式</th>
+                <th>角色</th>
               </tr>
             </thead>
             <tbody>
-              {pendingGrades.map((grade, idx) => (
-                <tr key={idx}>
-                  <td>{grade.course}</td>
-                  <td>{grade.score}</td>
-                  <td>{grade.studentId}</td>
-                  <td>
-                    <button onClick={() => handleApproveGrade(grade.gradeId)} disabled={loading}>✅ 通过</button>
-                    <button onClick={() => handleUpdateGradeStatus(grade.gradeId, "inactive")} disabled={loading}>❌ 驳回</button>
-                  </td>
-                </tr>
-              ))}
+              {userList.map((addr, idx) => {
+                const info = userInfoMap[addr];
+                return (
+                  <tr key={idx}>
+                    <td>{addr}</td>
+                    <td>{info?.username}</td>
+                    <td>{info?.email}</td>
+                    <td>{info?.contact}</td>
+                    <td>{info?.role}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
-        ) : (
-          <p>暂无待审核成绩</p>
-        )
-      )}
+        )}
+      </div>
+
+      {/* 待审核成绩 */}
+      <div className="admin-section">
+        <h3>📝 待审核成绩</h3>
+        <Link to="/grade-approval" className="btn-primary">审核成绩</Link>
+      </div>
     </div>
   );
 };
