@@ -1,22 +1,22 @@
-// SPDX-License-Identifier: MIT 
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
 contract EducationGrades {
     enum Role { Admin, Teacher, Student, GradeManager }
 
     struct Grade {
-        uint gradeId; // 将gradeId改为uint类型，使用自增ID
+        uint gradeId;
         string studentId;
         string course;
         uint8 score;
         uint256 timestamp;
         address teacher;
-        string status;  // 状态 "approved"、"pending" 或 "rejected"
+        string status;
         string remark;
     }
 
     struct User {
-        string username;
+        string username; // 即 studentId
         string email;
         string contactNumber;
         Role role;
@@ -26,13 +26,16 @@ contract EducationGrades {
     address public admin;
     mapping(address => User) public users;
     mapping(address => Role) public userRoles;
+    mapping(string => address) private studentIdToAddress; // studentId → address
+    mapping(address => string) private addressToStudentId; // address → studentId
+
     mapping(string => Grade[]) private studentGradesById;
     mapping(string => Grade[]) private studentGradesByUsername;
     mapping(address => Grade[]) private studentGradesByAddress;
     mapping(address => Grade[]) private teacherGrades;
     address[] private userList;
 
-    uint private gradeIdCounter = 0; // 自增ID计数器
+    uint private gradeIdCounter = 0;
 
     event GradeUploaded(uint indexed gradeId, string studentId, string course, uint8 score, address teacher);
     event GradeStatusUpdated(uint indexed gradeId, string newStatus);
@@ -48,16 +51,6 @@ contract EducationGrades {
 
     modifier onlyTeacher() {
         require(userRoles[msg.sender] == Role.Teacher, "Only teacher can perform this action");
-        _;
-    }
-
-    modifier onlyStudent() {
-        require(userRoles[msg.sender] == Role.Student, "Only student can perform this action");
-        _;
-    }
-
-    modifier onlyGradeManager() {
-        require(userRoles[msg.sender] == Role.GradeManager, "Only grade manager can perform this action");
         _;
     }
 
@@ -77,50 +70,41 @@ contract EducationGrades {
         emit RoleAssigned(_user, _role);
     }
 
-    function addTeacher(address _teacher) external onlyAdmin {
-        userRoles[_teacher] = Role.Teacher;
-        users[_teacher].role = Role.Teacher;
-        emit RoleAssigned(_teacher, Role.Teacher);
-    }
+    function registerUser(
+        string calldata studentId,
+        string calldata email,
+        string calldata contactNumber
+    ) external notAdmin {
+        require(!users[msg.sender].isRegistered, "Already registered");
+        require(studentIdToAddress[studentId] == address(0), "studentId already used");
 
-    function removeTeacher(address _teacher) external onlyAdmin {
-        userRoles[_teacher] = Role.Student;
-        users[_teacher].role = Role.Student;
-        emit RoleAssigned(_teacher, Role.Student);
-    }
-
-    function registerUser(string calldata username, string calldata email, string calldata contactNumber) external notAdmin {
-        require(!users[msg.sender].isRegistered, "This address is already registered.");
-        
         users[msg.sender] = User({
-            username: username,
+            username: studentId,
             email: email,
             contactNumber: contactNumber,
             role: Role.Student,
             isRegistered: true
         });
 
+        studentIdToAddress[studentId] = msg.sender;
+        addressToStudentId[msg.sender] = studentId;
         userList.push(msg.sender);
-        emit UserRegistered(msg.sender, username, email, contactNumber);
+
+        emit UserRegistered(msg.sender, studentId, email, contactNumber);
     }
 
-    // 修改上传成绩逻辑，默认状态为 "approved"
     function uploadGrade(
         string calldata studentId,
         string calldata course,
         uint8 score,
-        string calldata remark,
-        address studentAddress
+        string calldata remark
     ) external onlyTeacher {
         require(score <= 100, "Invalid score");
 
-        // Ensure student is registered
-        require(users[studentAddress].isRegistered, "Student is not registered");
+        address studentAddress = studentIdToAddress[studentId];
+        require(studentAddress != address(0), "Student not found");
 
-        // 自增ID
-        uint gradeId = gradeIdCounter;
-        gradeIdCounter++;
-
+        uint gradeId = gradeIdCounter++;
         Grade memory newGrade = Grade({
             gradeId: gradeId,
             studentId: studentId,
@@ -128,11 +112,10 @@ contract EducationGrades {
             score: score,
             timestamp: block.timestamp,
             teacher: msg.sender,
-            status: "approved",  // 默认上传成绩为通过
+            status: "approved",
             remark: remark
         });
 
-        // Store grade by student address
         studentGradesById[studentId].push(newGrade);
         studentGradesByUsername[users[studentAddress].username].push(newGrade);
         studentGradesByAddress[studentAddress].push(newGrade);
@@ -141,34 +124,30 @@ contract EducationGrades {
         emit GradeUploaded(gradeId, studentId, course, score, msg.sender);
     }
 
-    // 修改成绩状态为 "rejected" 的新函数
     function setGradeToRejected(uint gradeId) external onlyAdmin {
         bool updated = false;
         for (uint i = 0; i < userList.length; i++) {
             address studentAddress = userList[i];
-            string memory studentId = users[studentAddress].username;
+            string memory studentId = addressToStudentId[studentAddress];
             Grade[] storage grades = studentGradesById[studentId];
             for (uint j = 0; j < grades.length; j++) {
-                if (grades[j].gradeId == gradeId) {
-                    // 设置不通过的条件：成绩低于60分
-                    if (grades[j].score < 60) {
-                        grades[j].status = "rejected";
-                        updated = true;
-                        emit GradeStatusUpdated(gradeId, "rejected");
-                    }
+                if (grades[j].gradeId == gradeId && grades[j].score < 60) {
+                    grades[j].status = "rejected";
+                    updated = true;
+                    emit GradeStatusUpdated(gradeId, "rejected");
                     break;
                 }
             }
             if (updated) break;
         }
-        require(updated, "Grade not found or doesn't meet rejection criteria");
+        require(updated, "Grade not found or not eligible");
     }
 
     function updateGradeStatus(uint gradeId, string calldata newStatus) external onlyAdmin {
         bool updated = false;
         for (uint i = 0; i < userList.length; i++) {
             address studentAddress = userList[i];
-            string memory studentId = users[studentAddress].username;
+            string memory studentId = addressToStudentId[studentAddress];
             Grade[] storage grades = studentGradesById[studentId];
             for (uint j = 0; j < grades.length; j++) {
                 if (grades[j].gradeId == gradeId) {
@@ -187,7 +166,7 @@ contract EducationGrades {
         bool approved = false;
         for (uint i = 0; i < userList.length; i++) {
             address studentAddress = userList[i];
-            string memory studentId = users[studentAddress].username;
+            string memory studentId = addressToStudentId[studentAddress];
             Grade[] storage grades = studentGradesById[studentId];
             for (uint j = 0; j < grades.length; j++) {
                 if (grades[j].gradeId == gradeId) {
@@ -216,33 +195,28 @@ contract EducationGrades {
 
     function getLowScoreGrades() external view returns (Grade[] memory) {
         uint count = 0;
-        // 遍历所有学生成绩并计数低于60分的成绩
         for (uint i = 0; i < userList.length; i++) {
             address studentAddress = userList[i];
-            string memory studentId = users[studentAddress].username;
+            string memory studentId = addressToStudentId[studentAddress];
             Grade[] storage grades = studentGradesById[studentId];
             for (uint j = 0; j < grades.length; j++) {
-                if (grades[j].score < 60) {
-                    count++;
-                }
+                if (grades[j].score < 60) count++;
             }
         }
 
-        Grade[] memory lowScoreGrades = new Grade[](count);
+        Grade[] memory lowGrades = new Grade[](count);
         uint index = 0;
         for (uint i = 0; i < userList.length; i++) {
             address studentAddress = userList[i];
-            string memory studentId = users[studentAddress].username;
+            string memory studentId = addressToStudentId[studentAddress];
             Grade[] storage grades = studentGradesById[studentId];
             for (uint j = 0; j < grades.length; j++) {
                 if (grades[j].score < 60) {
-                    lowScoreGrades[index] = grades[j];
-                    index++;
+                    lowGrades[index++] = grades[j];
                 }
             }
         }
-
-        return lowScoreGrades;
+        return lowGrades;
     }
 
     function getUserInfo(address _user) external view returns (User memory) {
@@ -253,30 +227,17 @@ contract EducationGrades {
         return userRoles[_user];
     }
 
-    function isAdmin() external view returns (bool) {
-        return userRoles[msg.sender] == Role.Admin;
-    }
-
-    function isTeacher() external view returns (bool) {
-        return userRoles[msg.sender] == Role.Teacher;
-    }
-
-    function isStudent() external view returns (bool) {
-        return userRoles[msg.sender] == Role.Student;
-    }
-
-    function isGradeManager() external view returns (bool) {
-        return userRoles[msg.sender] == Role.GradeManager;
-    }
-
     function getAllUsers() external view onlyAdmin returns (address[] memory) {
         return userList;
     }
 
     function removeUser(address _user) external onlyAdmin {
-        require(users[_user].isRegistered, "User is not registered.");
-        delete studentGradesById[users[_user].username];
-        delete studentGradesByUsername[users[_user].username];
+        require(users[_user].isRegistered, "User not registered");
+        string memory studentId = addressToStudentId[_user];
+        delete studentIdToAddress[studentId];
+        delete addressToStudentId[_user];
+        delete studentGradesById[studentId];
+        delete studentGradesByUsername[studentId];
         delete studentGradesByAddress[_user];
         delete teacherGrades[_user];
         delete users[_user];

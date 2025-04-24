@@ -5,9 +5,9 @@ import contractAddressJson from '../contracts/contract-address.json';
 import { useNavigate } from 'react-router-dom';
 
 const GradeApprovalPage = () => {
-  const [lowScoreGrades, setLowScoreGrades] = useState([]);  // 用于存储成绩低于60分的成绩
+  const [lowScoreGrades, setLowScoreGrades] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [loadingGrades, setLoadingGrades] = useState(true);  // 定义loadingGrades
+  const [loadingGrades, setLoadingGrades] = useState(true);
   const navigate = useNavigate();
 
   const getContract = async () => {
@@ -17,18 +17,17 @@ const GradeApprovalPage = () => {
   };
 
   const fetchLowScoreGrades = async () => {
-    setLoadingGrades(true);  // 设置加载状态
+    setLoadingGrades(true);
     try {
       const contract = await getContract();
-      const grades = await contract.getAllGrades();  // 获取所有成绩
-      console.log("Fetched grades: ", grades);  // 查看获取到的成绩数据
-      const lowScoreGrades = grades.filter(grade => grade.score < 60);  // 过滤出成绩低于60分的成绩
-      setLowScoreGrades(lowScoreGrades);
+      const grades = await contract.getLowScoreGrades();  // 使用合约中的 getLowScoreGrades()
+      console.log("Fetched low score grades:", grades);
+      setLowScoreGrades(grades);
     } catch (err) {
       console.error(err);
-      alert("❌ 获取成绩失败");
+      alert("❌ 获取低分成绩失败");
     } finally {
-      setLoadingGrades(false);  // 重置加载状态
+      setLoadingGrades(false);
     }
   };
 
@@ -36,27 +35,27 @@ const GradeApprovalPage = () => {
     setLoading(true);
     try {
       const contract = await getContract();
-      const tx = await contract.updateGradeStatus(gradeId, newStatus); // 更新成绩状态
+      const tx = await contract.updateGradeStatus(gradeId, newStatus); // 与合约匹配的方法
       await tx.wait();
-      alert("✅ 成绩状态更新成功");
-      fetchLowScoreGrades();  // 更新低分成绩列表
+      alert("✅ 成绩状态已更新");
+      fetchLowScoreGrades(); // 更新数据
     } catch (err) {
       console.error(err);
-      alert("❌ 更新失败");
+      alert("❌ 更新成绩状态失败");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchLowScoreGrades();  // 初次加载时获取低分成绩
+    fetchLowScoreGrades();
   }, []);
 
   return (
     <div>
       <h2>📝 成绩审核（低于60分）</h2>
       {loadingGrades ? (
-        <p>加载低于60分的成绩...</p>
+        <p>正在加载成绩数据...</p>
       ) : (
         lowScoreGrades.length > 0 ? (
           <table border="1">
@@ -65,6 +64,9 @@ const GradeApprovalPage = () => {
                 <th>课程</th>
                 <th>分数</th>
                 <th>学生ID</th>
+                <th>教师地址</th>
+                <th>备注</th>
+                <th>状态</th>
                 <th>操作</th>
               </tr>
             </thead>
@@ -74,6 +76,9 @@ const GradeApprovalPage = () => {
                   <td>{grade.course}</td>
                   <td>{grade.score}</td>
                   <td>{grade.studentId}</td>
+                  <td>{grade.teacher}</td>
+                  <td>{grade.remark}</td>
+                  <td>{grade.status}</td>
                   <td>
                     <button 
                       onClick={() => handleUpdateGradeStatus(grade.gradeId, "rejected")} 
@@ -91,7 +96,7 @@ const GradeApprovalPage = () => {
             </tbody>
           </table>
         ) : (
-          <p>暂无低于60分的成绩</p>
+          <p>暂无低于60分的待审成绩</p>
         )
       )}
       <button onClick={() => navigate('/admin')}>返回管理员面板</button>

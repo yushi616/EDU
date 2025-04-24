@@ -3,64 +3,75 @@ import { ethers } from 'ethers';
 import contractABI from '../contracts/EducationGrades.json';
 import contractAddressJson from '../contracts/contract-address.json';
 import { Link } from 'react-router-dom';
-import styles from './RegisterUser.module.css'; // 引入新的CSS Module
+import styles from './RegisterUser.module.css';
 
 const RegisterUser = () => {
-  const [username, setUsername] = useState('');
+  const [studentId, setStudentId] = useState('');
   const [email, setEmail] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  const isValidPhone = (phone) => /^[0-9\-+]{7,15}$/.test(phone);
+
   const handleRegister = async () => {
-    if (!username || !email || !contactNumber) {
+    if (!studentId || !email || !contactNumber) {
       return alert("❌ 请填写完整信息");
     }
+    if (!isValidEmail(email)) {
+      return alert("❌ 邮箱格式不正确");
+    }
+    if (!isValidPhone(contactNumber)) {
+      return alert("❌ 联系方式格式不正确");
+    }
     if (!window.ethereum) {
-      return alert("请安装 MetaMask");
+      return alert("❌ 请安装 MetaMask 插件");
     }
 
     setLoading(true);
-    setErrorMessage(''); // 清空错误信息
+    setErrorMessage('');
 
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
       const signer = await provider.getSigner();
       const contract = new ethers.Contract(contractAddressJson.address, contractABI.abi, signer);
 
-      // 防止管理员自己注册
-      const userRole = await contract.getUserRole(signer.getAddress());
+      const userAddress = await signer.getAddress();
+      const userRole = await contract.getUserRole(userAddress);
       if (userRole === 0) {
         alert("❌ 管理员不能注册");
         return;
       }
 
-      // 调用合约的注册函数
-      const tx = await contract.registerUser(username, email, contactNumber);
-      await tx.wait();
-      alert('✅ 注册成功');
-      
-    } catch (err) {
-      console.error(err);
-
-      // 根据错误消息提供具体提示
-      let errorMessage = '❌ 注册失败';
-
-      if (err?.code === 'UNPREDICTABLE_GAS_LIMIT') {
-        errorMessage = '❌ 交易失败，无法预测Gas费用。';
-      } else if (err?.message.includes('revert')) {
-        if (err?.message.includes('管理员不能注册')) {
-          errorMessage = '❌ 你不能注册为用户，因为你是管理员。';
-        } else if (err?.message.includes('User already exists')) {
-          errorMessage = '❌ 用户已存在，请使用不同的用户名或联系方式。';
-        } else {
-          errorMessage = '❌ 合约操作失败，请稍后再试。';
-        }
-      } else {
-        errorMessage = '❌ 未知错误，请稍后再试。';
+      const userInfo = await contract.getUserInfo(userAddress);
+      if (userInfo.isRegistered) {
+        alert("❌ 当前地址已注册");
+        return;
       }
 
-      setErrorMessage(errorMessage);
+      const tx = await contract.registerUser(studentId, email, contactNumber);
+      await tx.wait();
+
+      alert("✅ 注册成功");
+      setStudentId('');
+      setEmail('');
+      setContactNumber('');
+    } catch (err) {
+      console.error(err);
+      let msg = '❌ 注册失败';
+
+      if (err?.code === 'UNPREDICTABLE_GAS_LIMIT') {
+        msg = '❌ 交易失败，可能是Gas费用估算问题';
+      } else if (err?.message.includes('studentId already used')) {
+        msg = '❌ 学号已被注册，请更换';
+      } else if (err?.message.includes('Already registered')) {
+        msg = '❌ 当前地址已注册';
+      } else {
+        msg = '❌ 合约调用失败，请稍后再试';
+      }
+
+      setErrorMessage(msg);
     } finally {
       setLoading(false);
     }
@@ -73,21 +84,21 @@ const RegisterUser = () => {
 
       <input
         className={styles.inputField}
-        placeholder="用户名"
-        value={username}
-        onChange={e => setUsername(e.target.value)}
+        placeholder="学号 / Student ID"
+        value={studentId}
+        onChange={(e) => setStudentId(e.target.value)}
       />
       <input
         className={styles.inputField}
         placeholder="邮箱"
         value={email}
-        onChange={e => setEmail(e.target.value)}
+        onChange={(e) => setEmail(e.target.value)}
       />
       <input
         className={styles.inputField}
         placeholder="联系方式"
         value={contactNumber}
-        onChange={e => setContactNumber(e.target.value)}
+        onChange={(e) => setContactNumber(e.target.value)}
       />
 
       <button

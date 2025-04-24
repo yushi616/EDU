@@ -1,112 +1,112 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ethers } from 'ethers';
 import contractABI from '../contracts/EducationGrades.json';
 import contractAddressJson from '../contracts/contract-address.json';
 import { Link } from 'react-router-dom';
-import styles from './ViewGrades.module.css'; // Import the new CSS Module
+import styles from './ViewGrades.module.css';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 const ViewGrades = () => {
-  const [searchType, setSearchType] = useState('studentId');
-  const [searchValue, setSearchValue] = useState('');
+  const [studentId, setStudentId] = useState('');
   const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [isStudent, setIsStudent] = useState(false); // Check if the user is a student
 
   const getContract = async () => {
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
     const contract = new ethers.Contract(contractAddressJson.address, contractABI.abi, signer);
-    return { contract, signer };
+    return contract;
   };
 
   const handleSearch = async () => {
-    if (!searchValue) return alert("❌ 请填写查询值");
+    if (!studentId) return alert("❌ 请输入学号");
 
     setLoading(true);
     try {
-        const { contract, signer } = await getContract();
-        let result;
+      const contract = await getContract();
+      const result = await contract.getGradesByStudentId(studentId);
 
-        if (searchType === 'studentId') {
-            result = await contract.getGradesByStudentId(searchValue);
-        } else if (searchType === 'address') {
-            result = await contract.getGradesByAddress(searchValue);
-        }
+      const parsedGrades = result.map(g => ({
+        studentId: g.studentId?.toString(),
+        course: g.course?.toString(),
+        score: Number(g.score),
+        status: g.status?.toString(),
+        timestamp: new Date(Number(g.timestamp) * 1000).toLocaleString(),
+        remark: g.remark?.toString(),
+        teacher: g.teacher  // 获取上传者信息
+      }));
 
-        // Explicitly convert fields to handle BigInt values
-        const parsedGrades = result.map(g => ({
-            studentId: g.studentId?.toString(),
-            course: g.course?.toString(),
-            score: Number(g.score),
-            status: g.status?.toString(),
-            timestamp: Number(g.timestamp),
-            remark: g.remark?.toString(),
-        }));
-
-        setGrades(parsedGrades);
+      setGrades(parsedGrades);
     } catch (err) {
-        console.error("❌ 查询错误：", err);
-        alert('❌ 查询失败，请检查输入值或稍后重试');
+      console.error("❌ 查询错误：", err);
+      alert('❌ 查询失败，请稍后再试');
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    const checkRole = async () => {
-      const { contract, signer } = await getContract();
-      const role = await contract.isStudent();
-      setIsStudent(role);
-    };
+  const exportToExcel = () => {
+    if (grades.length === 0) {
+      alert("暂无可导出的成绩数据");
+      return;
+    }
 
-    checkRole();
-  }, []);
+    const worksheet = XLSX.utils.json_to_sheet(grades);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Grades");
+
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array"
+    });
+
+    const data = new Blob([excelBuffer], { type: "application/octet-stream" });
+    saveAs(data, `Grades_${studentId}.xlsx`);
+  };
 
   return (
     <div className={styles.container}>
       <Link to="/" className={styles.link}>← 返回首页</Link>
       <h2 className={styles.heading}>📊 成绩查询</h2>
 
-      {/* Allow search options only if not a student */}
-      {!isStudent && (
-        <div>
-          <select
-            className={styles.selectInput}
-            value={searchType}
-            onChange={e => setSearchType(e.target.value)}
-          >
-            <option value="studentId">按学号</option>
-            <option value="address">按地址</option>
-          </select>
-        </div>
-      )}
-
       <input
         className={styles.textInput}
-        value={searchValue}
-        onChange={e => setSearchValue(e.target.value)}
-        placeholder="请输入查询值"
+        value={studentId}
+        onChange={e => setStudentId(e.target.value)}
+        placeholder="请输入学号"
       />
 
-      <button
-        className={styles.button}
-        onClick={handleSearch}
-        disabled={loading}
-      >
-        {loading ? '查询中...' : '查询成绩'}
-      </button>
+      <div className={styles.buttonRow}>
+        <button
+          className={styles.button}
+          onClick={handleSearch}
+          disabled={loading}
+        >
+          {loading ? '查询中...' : '查询成绩'}
+        </button>
+
+        <button
+          className={styles.button}
+          onClick={exportToExcel}
+          disabled={grades.length === 0}
+        >
+          导出成绩
+        </button>
+      </div>
 
       <div className={styles.tableContainer}>
         {grades.length > 0 ? (
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>学号/地址</th>
+                <th>学号</th>
                 <th>课程名</th>
                 <th>分数</th>
                 <th>状态</th>
                 <th>上传时间</th>
                 <th>备注</th>
+                <th>上传教师</th>
               </tr>
             </thead>
             <tbody>
@@ -116,8 +116,9 @@ const ViewGrades = () => {
                   <td>{grade.course}</td>
                   <td>{grade.score}</td>
                   <td>{grade.status}</td>
-                  <td>{new Date(grade.timestamp * 1000).toLocaleString()}</td>
+                  <td>{grade.timestamp}</td>
                   <td>{grade.remark}</td>
+                  <td>{grade.teacher}</td>
                 </tr>
               ))}
             </tbody>
