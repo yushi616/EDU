@@ -1,87 +1,132 @@
 /* ViewGrades.module.css */
-
 .container {
-    padding: 2rem;
-    max-width: 800px;
-    margin: auto;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  width: 90%;
+  max-width: 1200px;
+  margin: 40px auto;
+  padding: 20px;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.link {
+  text-decoration: none;
+  color: #4CAF50;
+  font-weight: bold;
+  font-size: 18px;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.heading {
+  font-size: 2rem;
+  color: #333;
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.textInput {
+  width: 100%;
+  max-width: 400px;
+  padding: 12px 15px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  box-sizing: border-box;
+  font-size: 16px;
+  margin: 0 auto 20px;
+  display: block;
+  background-color: #fff;
+  transition: all 0.3s ease;
+}
+
+.textInput:focus {
+  border-color: #4CAF50;
+  box-shadow: 0 0 5px rgba(76, 175, 80, 0.5);
+  outline: none;
+}
+
+.buttonRow {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 30px;
+}
+
+.button {
+  padding: 12px 20px;
+  font-size: 16px;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  width: 48%;
+}
+
+.button:disabled {
+  background-color: #ddd;
+  cursor: not-allowed;
+}
+
+.button:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.tableContainer {
+  margin-top: 30px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.table th, .table td {
+  padding: 12px;
+  text-align: center;
+  border: 1px solid #ddd;
+  font-size: 16px;
+}
+
+.table th {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.table tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+.table tr:hover {
+  background-color: #f1f1f1;
+  cursor: pointer;
+}
+
+.noGrades {
+  text-align: center;
+  color: #777;
+  font-size: 1.2rem;
+  padding: 20px;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+}
+
+@media (max-width: 768px) {
+  .container {
+    width: 95%;
   }
-  
-  .link {
-    display: inline-block;
-    margin-bottom: 1rem;
-    color: #3498db;
-    font-size: 1rem;
-    text-decoration: none;
+
+  .buttonRow {
+    flex-direction: column;
+    align-items: center;
   }
-  
-  .link:hover {
-    text-decoration: underline;
-  }
-  
-  .heading {
-    text-align: center;
-    font-size: 2rem;
-    font-weight: bold;
-    margin-bottom: 2rem;
-  }
-  
-  .selectInput, .textInput {
-    width: 100%;
-    padding: 1rem;
-    margin: 0.5rem 0;
-    border: 1px solid #ccc;
-    border-radius: 5px;
-    font-size: 1rem;
-  }
-  
+
   .button {
     width: 100%;
-    padding: 1rem;
-    background-color: #3498db;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 1rem;
+    margin: 5px 0;
   }
-  
-  .button:hover {
-    background-color: #2980b9;
-  }
-  
-  .table {
-    width: 100%;
-    margin-top: 2rem;
-    border-collapse: collapse;
-    border: 1px solid #ddd;
-  }
-  
-  .table th,
-  .table td {
-    padding: 0.75rem;
-    text-align: left;
-    border: 1px solid #ddd;
-  }
-  
-  .table th {
-    background-color: #2c3e50;
-    color: white;
-  }
-  
-  .table tr:hover {
-    background-color: #f4f4f4;
-  }
-  
-  .noGrades {
-    text-align: center;
-    font-size: 1.1rem;
-    color: #555;
-  }
-  
-  .table-container {
-    margin-top: 2rem;
-  }
-  
+}

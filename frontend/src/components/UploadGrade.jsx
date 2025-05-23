@@ -14,7 +14,7 @@ const UploadGrade = () => {
     remark: '',
   });
   const [batchGrades, setBatchGrades] = useState([]);
-  const [pendingGrades, setPendingGrades] = useState([]);
+  const [rejectedGrades, setRejectedGrades] = useState([]);
   const [loading, setLoading] = useState(false);
   const [batchLoading, setBatchLoading] = useState(false);
 
@@ -25,12 +25,12 @@ const UploadGrade = () => {
     return { contract, signer };
   };
 
-  const getPendingGrades = async () => {
+  const getRejectedGrades = async () => {
     try {
       const { contract, signer } = await getContract();
       const address = await signer.getAddress();
       const result = await contract.getGradesByAddress(address);
-      setPendingGrades(result.filter(g => g.status === 'pending'));
+      setRejectedGrades(result.filter(g => g.status === 'rejected'));
     } catch (err) {
       console.error("❌ 获取成绩失败:", err);
     }
@@ -71,7 +71,7 @@ const UploadGrade = () => {
       alert("✅ 成绩上传成功");
 
       setFormData({ studentId: '', course: '', score: '', remark: '' });
-      getPendingGrades();
+      getRejectedGrades();
     } catch (err) {
       console.error("上传失败:", err);
       alert(`❌ 上传失败: ${err?.error?.message || err.message}`);
@@ -120,7 +120,7 @@ const UploadGrade = () => {
 
       alert("✅ 批量上传成功");
       setBatchGrades([]);
-      getPendingGrades();
+      getRejectedGrades();
     } catch (err) {
       console.error("批量上传失败:", err);
       alert("❌ 批量上传失败，请检查文件格式或稍后重试");
@@ -130,7 +130,7 @@ const UploadGrade = () => {
   };
 
   useEffect(() => {
-    getPendingGrades();
+    getRejectedGrades();
   }, []);
 
   return (
@@ -178,35 +178,35 @@ const UploadGrade = () => {
         </button>
       </div>
 
-      <h3 className="text-2xl font-semibold mt-8 mb-4">📋 未审核成绩（pending）</h3>
-      {pendingGrades.length > 0 ? (
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              <th>成绩ID</th>
-              <th>课程</th>
-              <th>学生ID</th>
-              <th>分数</th>
-              <th>状态</th>
-              <th>备注</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pendingGrades.map((g, idx) => (
-              <tr key={idx}>
-                <td>{g.gradeId.toString()}</td>
-                <td>{g.course}</td>
-                <td>{g.studentId}</td>
-                <td>{g.score}</td>
-                <td>{g.status}</td>
-                <td>{g.remark}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <p className={styles.noGrades}>暂无未审核成绩</p>
-      )}
+      <h3 className="text-2xl font-semibold mt-8 mb-4">📋 不通过成绩（rejected）</h3>
+{rejectedGrades.length > 0 ? (
+  <table className={styles.table}>
+    <thead>
+      <tr>
+        <th>成绩ID</th>
+        <th>课程</th>
+        <th>学生ID</th>
+        <th>分数</th>
+        <th>状态</th>
+        <th>备注</th>
+      </tr>
+    </thead>
+    <tbody>
+      {rejectedGrades.map((g, idx) => (
+        <tr key={idx}>
+          <td>{g.gradeId.toString()}</td>
+          <td>{g.course}</td>
+          <td>{g.studentId}</td>
+          <td>{g.score}</td>
+          <td>{g.status}</td>
+          <td>{g.remark}</td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+) : (
+  <p className={styles.noGrades}>暂无不通过成绩</p>
+)}
     </div>
   );
 };
