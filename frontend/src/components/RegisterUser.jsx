@@ -7,6 +7,7 @@ import styles from './RegisterUser.module.css';
 
 const RegisterUser = () => {
   const [studentId, setStudentId] = useState('');
+  const [name, setName] = useState(''); 
   const [email, setEmail] = useState('');
   const [contactNumber, setContactNumber] = useState('');
   const [loading, setLoading] = useState(false);
@@ -16,7 +17,7 @@ const RegisterUser = () => {
   const isValidPhone = (phone) => /^[0-9\-+]{7,15}$/.test(phone);
 
   const handleRegister = async () => {
-    if (!studentId || !email || !contactNumber) {
+    if (!studentId || !name || !email || !contactNumber) {
       return alert("❌ 请填写完整信息");
     }
     if (!isValidEmail(email)) {
@@ -50,11 +51,13 @@ const RegisterUser = () => {
         return;
       }
 
-      const tx = await contract.registerUser(studentId, email, contactNumber);
+      // ✅ 调用合约新增 registerUser(studentId, name, email, contactNumber)
+      const tx = await contract.registerUser(studentId, name, email, contactNumber);
       await tx.wait();
 
       alert("✅ 注册成功");
       setStudentId('');
+      setName('');
       setEmail('');
       setContactNumber('');
     } catch (err) {
@@ -87,6 +90,12 @@ const RegisterUser = () => {
         placeholder="学号 / Student ID"
         value={studentId}
         onChange={(e) => setStudentId(e.target.value)}
+      />
+      <input
+        className={styles.inputField}
+        placeholder="姓名 / Name" // ✅ 新增输入框
+        value={name}
+        onChange={(e) => setName(e.target.value)}
       />
       <input
         className={styles.inputField}

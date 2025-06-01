@@ -25,31 +25,32 @@ const AdminPanel = () => {
   };
 
   const fetchUsers = async () => {
-    setLoadingUsers(true);
-    try {
-      const contract = await getContract();
-      const addresses = await contract.getAllUsers();
-      setUserList(addresses);
+  setLoadingUsers(true);
+  try {
+    const contract = await getContract();
+    const addresses = await contract.getAllUsers();
+    setUserList(addresses);
 
-      const infoMap = {};
-      for (let addr of addresses) {
-        const user = await contract.getUserInfo(addr);
-        const role = await contract.getUserRole(addr);
-        infoMap[addr] = {
-          username: user.username,
-          email: user.email,
-          contact: user.contactNumber,
-          role: roleLabels[role],
-        };
-      }
-      setUserInfoMap(infoMap);
-    } catch (err) {
-      console.error(err);
-      alert("❌ 获取用户列表失败，请稍后重试。");
-    } finally {
-      setLoadingUsers(false);
+    const infoMap = {};
+    for (let addr of addresses) {
+      const user = await contract.getUserInfo(addr);
+      const role = await contract.getUserRole(addr);
+      infoMap[addr] = {
+        username: user.username,
+        name: user.name,             
+        email: user.email,
+        contact: user.contactNumber,
+        role: roleLabels[role],
+      };
     }
-  };
+    setUserInfoMap(infoMap);
+  } catch (err) {
+    console.error(err);
+    alert("❌ 获取用户列表失败，请稍后重试。");
+  } finally {
+    setLoadingUsers(false);
+  }
+};
 
   useEffect(() => {
     fetchUsers();
@@ -161,6 +162,7 @@ const AdminPanel = () => {
               <tr>
                 <th>地址</th>
                 <th>学号</th>
+                <th>姓名</th> {/* ✅ 新增表头 */}
                 <th>邮箱</th>
                 <th>联系电话</th>
                 <th>角色</th>
@@ -173,6 +175,7 @@ const AdminPanel = () => {
                   <tr key={idx}>
                     <td>{addr}</td>
                     <td>{info?.username}</td>
+                    <td>{info?.name}</td> {/* ✅ 新增列显示姓名 */}
                     <td>{info?.email}</td>
                     <td>{info?.contact}</td>
                     <td>{info?.role}</td>

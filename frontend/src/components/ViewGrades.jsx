@@ -12,6 +12,7 @@ const ViewGrades = () => {
   const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // 获取合约实例
   const getContract = async () => {
     const provider = new ethers.BrowserProvider(window.ethereum);
     const signer = await provider.getSigner();
@@ -19,6 +20,7 @@ const ViewGrades = () => {
     return contract;
   };
 
+  // 查询成绩
   const handleSearch = async () => {
     if (!studentId) return alert("❌ 请输入学号");
 
@@ -29,6 +31,7 @@ const ViewGrades = () => {
 
       const parsedGrades = result.map(g => ({
         studentId: g.studentId?.toString(),
+        studentName: g.studentName?.toString(),  // 获取学生姓名
         course: g.course?.toString(),
         score: Number(g.score),
         status: g.status?.toString(),
@@ -46,6 +49,7 @@ const ViewGrades = () => {
     }
   };
 
+  // 导出为Excel
   const exportToExcel = () => {
     if (grades.length === 0) {
       alert("暂无可导出的成绩数据");
@@ -101,6 +105,7 @@ const ViewGrades = () => {
             <thead>
               <tr>
                 <th>学号</th>
+                <th>姓名</th>  {/* 新增姓名列 */}
                 <th>课程名</th>
                 <th>分数</th>
                 <th>状态</th>
@@ -113,6 +118,7 @@ const ViewGrades = () => {
               {grades.map((grade, index) => (
                 <tr key={index}>
                   <td>{grade.studentId}</td>
+                  <td>{grade.studentName}</td> {/* 显示学生姓名 */}
                   <td>{grade.course}</td>
                   <td>{grade.score}</td>
                   <td>{grade.status}</td>

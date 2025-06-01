@@ -1,94 +1,120 @@
-/* Global Styles */
 body {
-  font-family: 'Roboto', sans-serif;
+  background-color: #f4f6fc;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   margin: 0;
-  padding: 0;
-  background-color: #f8f8f8;
 }
 
-a {
-  text-decoration: none;
-  color: inherit;
-}
-
-/* Header Styles */
 .header {
+  background: linear-gradient(90deg, #4b6cb7, #182848);
+  color: #fff;
+  padding: 1rem 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 2rem;
-  background-color: #2C3E50;
-  color: white;
-  border-bottom: 2px solid #ddd;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .nav-links {
   display: flex;
+  gap: 1.5rem;
 }
 
 .nav-link {
-  margin-right: 1.5rem;
-  font-weight: bold;
-  color: white;
-  font-size: 1rem;
+  text-decoration: none;
+  color: #f0f0f0;
+  font-weight: 500;
+  transition: color 0.2s;
 }
 
 .nav-link:hover {
-  text-decoration: underline;
+  color: #ffd700;
 }
 
 .account-info {
   font-size: 0.9rem;
+  text-align: right;
   color: #ddd;
 }
 
-/* Main Content */
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 260px;
+  background: #eef1f8;
+  padding: 1.5rem;
+  border-right: 1px solid #d0d7e2;
+  box-shadow: 2px 0 6px rgba(0, 0, 0, 0.02);
+}
+
+.sidebar h3 {
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.menu-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.menu-list li {
+  margin: 0.75rem 0;
+}
+
+.menu-list li a {
+  text-decoration: none;
+  color: #444;
+  transition: all 0.2s;
+  padding: 0.4rem 0.6rem;
+  display: inline-block;
+  border-radius: 4px;
+}
+
+.menu-list li a:hover {
+  background-color: #dbe4f1;
+  color: #2c3e50;
+}
+
+.menu-list li.active a {
+  font-weight: bold;
+  background-color: #4b6cb7;
+  color: #fff;
+}
+
+.sidebar-info {
+  margin-top: 2rem;
+  font-size: 0.9rem;
+  background: #fff;
+  padding: 1rem;
+  border: 1px solid #d0d7e2;
+  border-radius: 8px;
+  color: #333;
+}
+
 .main-content {
+  flex-grow: 1;
   padding: 2rem;
-  background-color: #fff;
-  margin: 2rem;
-  border-radius: 10px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .home h2 {
-  font-size: 2rem;
-  color: #2C3E50;
+  font-size: 1.8rem;
+  color: #333;
 }
 
 .home p {
   font-size: 1.1rem;
   color: #555;
+  margin-top: 1rem;
 }
 
-.home-links {
-  list-style: none;
-  padding: 0;
-}
-
-.home-link {
-  display: block;
-  padding: 10px;
-  font-size: 1.2rem;
-  margin: 10px 0;
-  background-color: #3498DB;
-  color: white;
-  text-align: center;
-  border-radius: 8px;
-}
-
-.home-link:hover {
-  background-color: #2980B9;
-}
-
-/* 404 Not Found */
-.not-found {
-  text-align: center;
-  margin-top: 50px;
-  font-size: 1.5rem;
-}
-
-.not-found a {
-  color: #3498DB;
-  font-weight: bold;
+.card {
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
 }

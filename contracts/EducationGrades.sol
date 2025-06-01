@@ -12,6 +12,7 @@ contract EducationGrades {
     struct Grade {
         uint gradeId;            // 成绩ID（唯一标识）
         string studentId;        // 学生ID（学号）
+        string studentName;      // 学生姓名 
         string course;           // 课程名称
         uint8 score;             // 分数（0~100）
         uint256 timestamp;       // 上传时间戳
@@ -23,6 +24,7 @@ contract EducationGrades {
     // 用户结构体，包含注册信息和角色
     struct User {
         string username;         // 用户名（学号）
+        string name;             // 学生姓名 
         string email;            // 邮箱
         string contactNumber;    // 联系方式
         Role role;               // 用户角色
@@ -86,28 +88,24 @@ contract EducationGrades {
     // 学生注册，绑定学号、邮箱、联系方式，角色初始设为学生
     function registerUser(
         string calldata studentId,
+        string calldata name,             
         string calldata email,
         string calldata contactNumber
     ) external notAdmin {
-        // 校验：当前用户未注册
-        require(!users[msg.sender].isRegistered, "Already registered");
-        // 校验：学号未被使用
-        require(studentIdToAddress[studentId] == address(0), "studentId already used");
+        require(!users[msg.sender].isRegistered, "Already registered"); // 校验：当前用户未注册
+        require(studentIdToAddress[studentId] == address(0), "studentId already used"); // 校验：学号未被使用
 
-        // 建立用户信息并保存
         users[msg.sender] = User({
             username: studentId,          // 将学号作为用户名
+            name: name,                   //  保存姓名
             email: email,                 // 保存用户邮箱
             contactNumber: contactNumber, // 保存联系人电话
             role: Role.Student,           // 设置默认角色为学生
             isRegistered: true            // 标记为已注册
         });
 
-        // 将学号与用户地址进行关联
         studentIdToAddress[studentId] = msg.sender;
-        // 将用户地址与学号进行关联
         addressToStudentId[msg.sender] = studentId;
-        // 将用户的地址加入用户列表
         userList.push(msg.sender);
 
         emit UserRegistered(msg.sender, studentId, email, contactNumber); // 触发用户注册事件
@@ -120,29 +118,26 @@ contract EducationGrades {
         uint8 score,
         string calldata remark
     ) external onlyTeacher {
-        // 校验：分数在有效范围内（0-100）
-        require(score <= 100, "Invalid score");
+        require(score <= 100, "Invalid score"); // 校验：分数在有效范围内（0-100）
 
-        // 查找学生地址
-        address studentAddress = studentIdToAddress[studentId];
-        // 校验：学生地址存在
-        require(studentAddress != address(0), "Student not found");
+        address studentAddress = studentIdToAddress[studentId]; // 查找学生地址
+        require(studentAddress != address(0), "Student not found"); // 校验：学生地址存在
 
-        // 创建新成绩记录 ID
+        string memory studentName = users[studentAddress].name; 
+
         uint gradeId = gradeIdCounter++;
-        // 创建成绩结构体实例并初始化
         Grade memory newGrade = Grade({
-            gradeId: gradeId,                    // 成绩ID
-            studentId: studentId,                // 学生ID
-            course: course,                       // 课程名称
-            score: score,                         // 分数
-            timestamp: block.timestamp,           // 当前区块时间戳
-            teacher: msg.sender,                  // 上传成绩的教师地址
-            status: "approved",                   // 成绩初始状态为已批准
-            remark: remark                        // 教师备注
+            gradeId: gradeId,
+            studentId: studentId,
+            studentName: studentName,         
+            course: course,
+            score: score,
+            timestamp: block.timestamp,
+            teacher: msg.sender,
+            status: "approved",
+            remark: remark
         });
 
-        // 将成绩记录存储到多个映射中，便于通过不同的索引查询
         studentGradesById[studentId].push(newGrade);
         studentGradesByUsername[users[studentAddress].username].push(newGrade);
         studentGradesByAddress[studentAddress].push(newGrade);
@@ -150,6 +145,7 @@ contract EducationGrades {
 
         emit GradeUploaded(gradeId, studentId, course, score, msg.sender); // 触发成绩上传事件
     }
+
 
     // 管理员将某个不及格成绩的状态更改为 rejected
     function setGradeToRejected(uint gradeId) external onlyAdmin {
@@ -200,6 +196,28 @@ contract EducationGrades {
         }
         require(updated, "Grade not found"); // 校验：未找到成绩
     }
+
+    function updateGradeStatusByStudentAndCourse(
+    string calldata studentId,
+    string calldata course,
+    string calldata newStatus
+) external onlyAdmin {
+    bool updated = false;
+
+    Grade[] storage grades = studentGradesById[studentId];
+    for (uint i = 0; i < grades.length; i++) {
+        if (
+            keccak256(bytes(grades[i].course)) == keccak256(bytes(course))
+        ) {
+            grades[i].status = newStatus;
+            emit GradeStatusUpdated(grades[i].gradeId, newStatus);
+            updated = true;
+            break;
+        }
+    }
+
+    require(updated, "Grade not found for given studentId and course");
+}
 
     // 管理员批准成绩，设置为“已批准”状态
     function approveGrade(uint gradeId) external onlyAdmin {
@@ -304,4 +322,29 @@ contract EducationGrades {
 
         emit UserRemoved(_user); // 触发用户移除事件
     }
+    // 按学号和课程查询成绩列表
+    function getGradesByStudentAndCourse(
+    string calldata studentId,
+    string calldata course
+    ) external view returns (Grade[] memory) {
+    Grade[] storage grades = studentGradesById[studentId];
+    uint count = 0;
+
+    for (uint i = 0; i < grades.length; i++) {
+        if (keccak256(bytes(grades[i].course)) == keccak256(bytes(course))) {
+            count++;
+        }
+    }
+
+    Grade[] memory result = new Grade[](count);
+    uint index = 0;
+
+    for (uint i = 0; i < grades.length; i++) {
+        if (keccak256(bytes(grades[i].course)) == keccak256(bytes(course))) {
+            result[index++] = grades[i];
+        }
+    }
+
+    return result;
+}
 }

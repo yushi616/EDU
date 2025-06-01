@@ -1,0 +1,182 @@
+.pageWrapper {
+  padding: 2rem;
+  background-color: #f4f6fc;
+  min-height: 100vh;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.pageTitle {
+  font-size: 2.2rem;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 1.5rem;
+}
+
+.searchContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.searchContainer input {
+  width: 100%;
+  max-width: 350px;
+  padding: 0.8rem;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.searchContainer input:focus {
+  border-color: #4b6cb7;
+  outline: none;
+}
+
+.searchContainer button {
+  background-color: #4b6cb7;
+  color: white;
+  padding: 0.8rem 1.2rem;
+  font-size: 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  width: 150px;
+  margin-top: 1rem;
+}
+
+.searchContainer button:hover {
+  background-color: #3a57a5;
+}
+
+.loadingText {
+  font-size: 1.1rem;
+  color: #666;
+}
+
+.tableContainer {
+  background: #fff;
+  padding: 1.5rem;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 1200px;
+  margin-top: 2rem;
+}
+
+h3 {
+  font-size: 1.6rem;
+  color: #333;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 1rem;
+}
+
+.table th,
+.table td {
+  padding: 1rem;
+  border: 1px solid #ddd;
+  text-align: left;
+}
+
+.table th {
+  background-color: #f0f2f7;
+  color: #333;
+  font-weight: bold;
+}
+
+.table tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+.table tr:hover {
+  background-color: #f5f5f5;
+}
+
+.table td button {
+  font-size: 0.9rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  margin: 0.5rem;
+}
+
+.btnPrimary {
+  background-color: #4b6cb7;
+  color: white;
+  border: none;
+  transition: background-color 0.3s;
+}
+
+.btnPrimary:hover {
+  background-color: #3a57a5;
+}
+
+.btnDanger {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  transition: background-color 0.3s;
+}
+
+.btnDanger:hover {
+  background-color: #d32f2f;
+}
+
+.noData {
+  font-size: 1rem;
+  color: #666;
+  text-align: center;
+}
+
+.backBtn {
+  background-color: #4b6cb7;
+  color: white;
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-top: 2rem;
+  width: 200px;
+}
+
+.backBtn:hover {
+  background-color: #3a57a5;
+}
+
+@media (max-width: 768px) {
+  .searchContainer {
+    width: 100%;
+    padding: 0 1rem;
+  }
+
+  .searchContainer input,
+  .searchContainer button {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .table th,
+  .table td {
+    font-size: 0.9rem;
+    padding: 0.8rem;
+  }
+
+  .backBtn {
+    width: 100%;
+    max-width: 300px;
+  }
+}
